@@ -1,4 +1,5 @@
 import pygame
+import random
  
 # Define some colors
 BLACK = (0, 0, 0)
@@ -9,14 +10,173 @@ RED = (255, 0, 0)
 pygame.init()
  
 # Set the width and height of the screen [width, height]
-size = (700, 500)
+size = (700, 700)
 screen = pygame.display.set_mode(size)
- 
+class ShieldParts(pygame.sprite.Sprite):
+    def __init__(self,x,y):
+        # constructor for individual shield pieces
+        super().__init__()
+        self.image = pygame.Surface((8,8))
+        self.image.fill(GREEN)
+
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+class EnemyBullet(pygame.sprite.Sprite):
+    def __init__(self,x,y):
+        #constructor for bullet
+        super().__init__()
+        self.image = pygame.Surface((4, 12))
+        self.image.fill(RED)
+        
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+    def update(self):
+
+        self.rect.y += 2
+
+class PlayerBullet(pygame.sprite.Sprite):
+    def __init__(self,x,y):
+        #constructor for bullet
+        super().__init__()
+        self.image = pygame.Surface((4, 12))
+        self.image.fill(RED)
+        
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+    def update(self):
+        # making the bullet move and removing it from the list when it's off the screen
+        
+        self.rect.y -= 2
+        
+            
+        
+            
+            
+           
+
+        
+
+
+class Player(pygame.sprite.Sprite):
+    
+    def __init__(self,score,lives):
+        # constructor for player
+        super().__init__()
+        self.image = pygame.Surface((40, 40))
+        self.image.fill(WHITE)
+        
+        self.score = score
+        self.rect = self.image.get_rect()
+        self.rect.x = 10
+        self.rect.y = 600
+        self.x_speed = 0
+        self.lives = lives
+    
+    def move(self,speed):
+        # method to change the players speed
+        self.x_speed = speed
+
+
+    def update(self):
+        # how the player will change every frame
+        if self.rect.x >= 0 and self.rect.x <= 660:
+
+            self.rect.x += self.x_speed
+        elif self.rect.x < 0:
+            self.rect.x += 5
+        elif self.rect.x > 660:
+            self.rect.x -= 5
+
+        self.font = pygame.font.SysFont("serif", 30)
+        self.text = self.font.render("Score: " + str(self.score), True, WHITE)
+        screen.blit(self.text, [570,670])
+            
+
+class Enemy(pygame.sprite.Sprite):
+    # constructor for enemy 
+    def __init__(self,x,y):
+        super().__init__()
+        self.image = pygame.Surface((40, 40 ))
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.x_speed = 1
+
+        self.moving_right = True
+        
+        self.moved_right = 0
+        
+        
+
+    def update(self):
+
+        # to make the enemies move right then down and so on
+        if self.moving_right:
+            self.rect.x += self.x_speed
+            self.moved_right += 1
+            if self.moved_right == 170:
+                self.rect.y += 20
+                self.x_speed *= -1
+                self.moved_right = 0
+
+        
+
+#TODO: make shield smaller so there arnt too many sprites
+        
+shield_map = [[0,0,0,1,1,1,1,1,1,1,1,1,0,0,0],
+            [0,0,1,1,1,1,1,1,1,1,1,1,1,0,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,0,0,0,0,0,0,0,1,1,1,1],
+            [1,1,1,0,0,0,0,0,0,0,0,0,1,1,1]]
+        
+
+# sprite lists
+
+all_sprites_group = pygame.sprite.Group()
+enemy_list = pygame.sprite.Group()
+enemy_bullet_list = pygame.sprite.Group()
+player_bullet_list = pygame.sprite.Group()
+shield_list = pygame.sprite.Group()
+
+# instantiate the sprites
+player = Player(0,3)
+all_sprites_group.add(player)
+
+for i in range(8):
+    for j in range(5):
+        enemy = Enemy(i*70,j*50)
+        all_sprites_group.add(enemy)
+        enemy_list.add(enemy)
+def CreateShield(x,y):
+    for i in range(10):
+        for j in range(15):
+            if shield_map[i][j] == 1:
+                shield_part = ShieldParts(j*8 + (x-8),i*8 + (y-8))
+                shield_list.add(shield_part)
+                all_sprites_group.add(shield_part)
+for i in range(4):
+    CreateShield(170*i+40,500)
+
 pygame.display.set_caption("My Game")
  
 # Loop until the user clicks the close button.
 done = False
- 
+game_start = False
+game_won = False
+game_lost = False
+high_score = 0
 # Used to manage how fast the screen updates
 clock = pygame.time.Clock()
  
@@ -26,9 +186,92 @@ while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
+
+        if event.type == pygame.MOUSEBUTTONDOWN and game_start == False:
+            game_start = True
+            all_sprites_group = pygame.sprite.Group()
+            enemy_list = pygame.sprite.Group()
+            bullet_list = pygame.sprite.Group()
+
+            # instantiate the sprites
+            player = Player(0,3)
+            all_sprites_group.add(player)
+
+            for i in range(8):
+                for j in range(5):
+                    enemy = Enemy(i*70,j*50)
+                    all_sprites_group.add(enemy)
+                    enemy_list.add(enemy)
+            for i in range(4):
+                CreateShield(170*i+40,500)
+        # making the player move 
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                player.move(5)
+            if event.key == pygame.K_LEFT:
+                player.move(-5)
+
+            # shooting
+            if event.key == pygame.K_SPACE:
+                
+                player_bullet = PlayerBullet(player.rect.x + 19, player.rect.y,)
+                all_sprites_group.add(player_bullet)
+                player_bullet_list.add(player_bullet)
+                if player_bullet.rect.y < 0:
+                    player_bullet_list.remove(player_bullet)
+                    all_sprites_group.remove(player_bullet)
+              
+                
+
+
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_RIGHT:
+                player.move(0)
+            if event.key == pygame.K_LEFT:
+                player.move(0)
  
     # --- Game logic should go here
- 
+    for enemy in enemy_list:
+        randomn = random.randint(0,700)
+        
+        if randomn == 1:
+            enemy_bullet = EnemyBullet(enemy.rect.x + 19, enemy.rect.y,)
+            all_sprites_group.add(enemy_bullet)
+            enemy_bullet_list.add(enemy_bullet)
+            if enemy_bullet.rect.y > 700:
+                enemy_bullet_list.remove(bullet)
+                all_sprites_group.remove(bullet)
+
+    for enemy_bullet in enemy_bullet_list:
+        shield_hit_list = pygame.sprite.spritecollide(enemy_bullet, shield_list, True)
+
+        
+        for shield_part in shield_hit_list:
+            temp_x = shield_part.rect.x
+            temp_y = shield_part.rect.y
+            all_sprites_group.remove(enemy_bullet)
+            enemy_bullet_list.remove(enemy_bullet)
+            for shield_part in shield_list:
+                if (shield_part.rect.x == temp_x + 8 or  shield_part.rect.x == temp_x -8 or shield_part.rect.x == temp_x) and (shield_part.rect.y == temp_y + 8 or  shield_part.rect.y == temp_y -8 or shield_part.rect.y == temp_y):
+                    all_sprites_group.remove(shield_part)
+                    shield_list.remove(shield_part) 
+            
+
+
+    if not enemy_list:
+        game_won = True
+        game_start = False
+        
+
+   
+    if player.lives < 1:
+        game_start = False
+        game_lost = True
+    
+    if player.score > high_score:
+        high_score = player.score
+    
+    
     # --- Screen-clearing code goes here
  
     # Here, we clear the screen to white. Don't put other drawing commands
@@ -36,12 +279,40 @@ while not done:
  
     # If you want a background image, replace this clear with blit'ing the
     # background image.
-    screen.fill(WHITE)
+    screen.fill(BLACK)
  
     # --- Drawing code should go here
- 
+    if game_start:
+        all_sprites_group.update()
+        all_sprites_group.draw(screen)
+    elif not game_start:
+        if game_won:
+            font = pygame.font.SysFont("serif", 60)
+            text = font.render("You win!!!!!", True, WHITE)
+            screen.blit(text, [200,330])
+            text = font.render("Click anywhere to Restart", True, WHITE)
+            screen.blit(text, [120, 500])
+        elif game_lost:
+            font = pygame.font.SysFont("serif", 60)
+            text = font.render("You lose!!!!!", True, WHITE)
+            screen.blit(text, [200,330])
+            text = font.render("High Score: " + str(high_score), True, WHITE)
+            screen.blit(text, [100, 600])
+            text = font.render("Click anywhere to restart", True, WHITE)
+            screen.blit(text, [100, 500])
+        else:
+            font = pygame.font.SysFont("serif", 60)
+            text = font.render("Space Invaders", True, WHITE)
+            screen.blit(text, [200,330])
+            text = font.render("High Score: " + str(high_score), True, WHITE)
+            screen.blit(text, [100, 600])
+            text = font.render("Click anywhere to Start", True, WHITE)
+            screen.blit(text, [100, 500])
+    
     # --- Go ahead and update the screen with what we've drawn.
+    
     pygame.display.flip()
+
  
     # --- Limit to 60 frames per second
     clock.tick(60)
